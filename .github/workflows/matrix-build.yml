@@ -1,0 +1,82 @@
+name: Multi-Platform Matrix Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }} with Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [18, 20]
+        include:
+          - os: ubuntu-latest
+            artifact-suffix: linux
+          - os: macos-latest
+            artifact-suffix: macos
+          - os: windows-latest
+            artifact-suffix: windows
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: matrix-cc8d787
+        run: |
+          echo "Building for ${{ matrix.os }} with Node.js ${{ matrix.node-version }}"
+          echo "Matrix variant: ${{ matrix.artifact-suffix }}-node${{ matrix.node-version }}"
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Generate build information
+        run: |
+          echo "Build Information" > build-info.txt
+          echo "==================" >> build-info.txt
+          echo "OS: ${{ matrix.os }}" >> build-info.txt
+          echo "Node Version: ${{ matrix.node-version }}" >> build-info.txt
+          echo "Runner OS: ${{ runner.os }}" >> build-info.txt
+          echo "Build Time: $(date)" >> build-info.txt
+          echo "GitHub SHA: ${{ github.sha }}" >> build-info.txt
+          echo "Workflow Run: ${{ github.run_number }}" >> build-info.txt
+        shell: bash
+      
+      - name: Create build artifact
+        run: |
+          mkdir -p build-output
+          echo "{ \"os\": \"${{ matrix.os }}\", \"node\": \"${{ matrix.node-version }}\", \"platform\": \"${{ matrix.artifact-suffix }}\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"status\": \"success\" }" > build-output/manifest.json
+          cp build-info.txt build-output/
+          echo "Build completed successfully for ${{ matrix.artifact-suffix }}-node${{ matrix.node-version }}" > build-output/output.txt
+        shell: bash
+      
+      - name: Display build contents
+        run: |
+          echo "Build artifacts created:"
+          cat build-output/build-info.txt
+          echo ""
+          cat build-output/manifest.json
+          echo ""
+          cat build-output/output.txt
+        shell: bash
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-cc8d787-${{ matrix.artifact-suffix }}-node${{ matrix.node-version }}
+          path: build-output/
+          retention-days: 30
+          if-no-files-found: error
+      
+      - name: Verify artifact creation
+        run: |
+          echo "Artifact build-cc8d787-${{ matrix.artifact-suffix }}-node${{ matrix.node-version }} has been uploaded successfully"
+        shell: bash
